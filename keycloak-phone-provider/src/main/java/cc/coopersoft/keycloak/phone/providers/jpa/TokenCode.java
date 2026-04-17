@@ -39,11 +39,9 @@ public class TokenCode {
         @Column(name = "CODE", nullable = false)
         private String code;
 
-        @Temporal(TemporalType.TIMESTAMP)
         @Column(name = "CREATED_AT", nullable = false)
         private Date createdAt;
 
-        @Temporal(TemporalType.TIMESTAMP)
         @Column(name = "EXPIRES_AT", nullable = false)
         private Date expiresAt;
 
