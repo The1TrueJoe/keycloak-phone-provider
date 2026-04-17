@@ -44,8 +44,8 @@ public class PhoneLoginAndAutoCreateUserForm extends UsernamePasswordForm {
             return false;
         }
         try {
-            Utils.canonicalizePhoneNumber(context.getSession(), username);
             username = Utils.standardizePhoneNumber(context.getSession(), username);
+            formData.put(Details.USERNAME, Collections.singletonList(username));
         } catch (PhoneNumberInvalidException e) {
             context.getEvent().error(Errors.INVALID_INPUT);
             Response challengeResponse = challenge(context, e.getErrorType().message(), Validation.FIELD_USERNAME);
@@ -60,7 +60,7 @@ public class PhoneLoginAndAutoCreateUserForm extends UsernamePasswordForm {
     }
 
     private UserModel createUserModel(MultivaluedMap<String, String> inputData, AuthenticationFlowContext context) {
-        String username = Utils.standardizePhoneNumber(context.getSession(), inputData.getFirst(Details.USERNAME));
+        String username = inputData.getFirst(Details.USERNAME);
         UserModel user;
         inputData.put(Details.USERNAME, Collections.singletonList(username));
         UserProfileProvider profileProvider = context.getSession().getProvider(UserProfileProvider.class);
