@@ -1,0 +1,10 @@
+cc.coopersoft.keycloak.phone.providers.sender.TwilioMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.DummyMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.AwsSnsMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.BulksmsMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.CloopenMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.YunxinMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.AliyunMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.TencentMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.TotalVoiceMessageSenderServiceProviderFactory
+cc.coopersoft.keycloak.phone.providers.sender.TwoFactorMessageSenderServiceProviderFactory

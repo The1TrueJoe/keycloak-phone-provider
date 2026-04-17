@@ -85,26 +85,53 @@ anymore and I did not test user storage beyond Kerberos or LDAP. I may try to he
 
 If you want to build the project, simply run  `examples/docker-build.sh` after cloning the repository.
 
-  + `keycloak-phone-provide`  
-    main
-    
-  + `keycloak-phone-provide.resources`  
-    theme
+#### Project structure
 
-  + `keycloak-sms-provider-dummy`  
-    test message will print to console.
+  + `keycloak-phone-provider` — Core module. Contains the phone SPI, JPA entities,
+    authenticators, required actions, REST endpoints, **and all SMS sender
+    implementations**.
+  + `keycloak-phone-provider.resources` — Theme / UI resources.
+  + `keycloak-wx-provider-app` — WeChat mini-program authenticator (separate
+    package, no overlap with the core module).
 
-    For sms service provider, choose one of:  
-    `keycloak-sms-provider-aws-sns`  
-    `keycloak-sms-provider-totalvoice`  
-    `keycloak-sms-provider-twilio`  
-    `keycloak-sms-provider-cloopen`  
-    `keycloak-sms-provider-yunxin`  
-    `keycloak-sms-provider-aliyun`  
-    `keycloak-sms-provider-tencent`  
+#### Choosing SMS providers at build time
+
+All sender SDKs are declared with `<scope>provided</scope>` so they compile
+but are **not** bundled into the uber-jar by default.  Activate one or more
+Maven **profiles** to include only the providers you need:
+
+```bash
+# Only Twilio + Dummy (logging-only test sender)
+mvn clean package -Ptwilio,dummy -DskipTests
+
+# Twilio + AWS SNS
+mvn clean package -Ptwilio,aws-sns -DskipTests
+
+# Everything
+mvn clean package -Pall-senders -DskipTests
+```
+
+Available profiles:
+
+| Profile        | SDK bundled                                | Provider ID   |
+|----------------|--------------------------------------------|---------------|
+| `twilio`       | `com.twilio.sdk:twilio`                    | `twilio`      |
+| `aws-sns`      | `com.amazonaws:aws-java-sdk-sns`           | `aws`         |
+| `dummy`        | _(none — logs to console)_                 | `dummy`       |
+| `bulksms`      | _(none — uses Keycloak SimpleHttp)_        | `bulksms`     |
+| `cloopen`      | `com.cloopen:java-sms-sdk`                 | `cloopen`     |
+| `yunxin`       | _(none — uses provided httpclient)_        | `yunxin`      |
+| `aliyun`       | `com.aliyun:alibabacloud-dysmsapi20170525` | `aliyun`      |
+| `tencent`      | `com.tencentcloudapi:tencentcloud-sdk-java`| `tencent`     |
+| `totalvoice`   | `br.com.totalvoice:totalvoice-java`        | `totalvoice`  |
+| `twofactor`    | _(none — uses bundled okhttp)_             | `twofactor`   |
+| `all-senders`  | _All of the above_                         | —             |
+
+After building, copy the JARs from `target/providers/` into your Keycloak
+`providers/` directory.
 
 + Local
-  1. local keycloak installed: copy the `target\providers` to keycloak home directory
+  1. local keycloak installed: copy the `target/providers` to keycloak home directory
   2. kc.[sh|bat] build
   3. Start Keycloak.
 

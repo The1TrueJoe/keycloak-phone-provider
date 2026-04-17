@@ -12,6 +12,14 @@
 
     <artifactId>keycloak-phone-provider</artifactId>
 
+    <!--
+      All sender SDK dependencies are "provided" by default so they compile
+      but are NOT bundled into the uber-jar.  Activate Maven profiles to
+      include the ones you need:
+        mvn package -Ptwilio,dummy          (just Twilio + Dummy)
+        mvn package -Ptwilio,dummy,aws-sns  (add AWS SNS)
+        mvn package -Pall-senders           (everything)
+    -->
     <dependencies>
         <dependency>
             <groupId>org.keycloak</groupId>
@@ -39,7 +47,74 @@
             <artifactId>resteasy-jaxrs</artifactId>
             <version>3.15.6.Final</version>
         </dependency>
+
+        <!-- ── Sender SDK deps (provided = compile-only, not bundled) ── -->
+        <dependency>
+            <groupId>com.twilio.sdk</groupId>
+            <artifactId>twilio</artifactId>
+            <version>9.2.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sns</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.cloopen</groupId>
+            <artifactId>java-sms-sdk</artifactId>
+            <version>1.0.4</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>xml-apis</groupId>
+                    <artifactId>xml-apis</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>alibabacloud-dysmsapi20170525</artifactId>
+            <version>3.0.0</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk15on</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java</artifactId>
+            <version>3.1.706</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>br.com.totalvoice</groupId>
+            <artifactId>totalvoice-java</artifactId>
+            <version>1.4.13</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bom</artifactId>
+                <version>1.12.762</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
@@ -87,4 +162,155 @@
 
         </plugins>
     </build>
+
+    <!-- Activate profiles to bundle specific sender SDKs into the uber-jar.
+         Example: mvn package -Ptwilio,dummy
+         The "dummy" provider has no external deps so it's always available. -->
+    <profiles>
+        <profile>
+            <id>twilio</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.twilio.sdk</groupId>
+                    <artifactId>twilio</artifactId>
+                    <version>9.2.4</version>
+                    <scope>compile</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>aws-sns</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-sns</artifactId>
+                    <scope>compile</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>bulksms</id>
+            <!-- No extra deps — uses Keycloak's built-in SimpleHttp -->
+        </profile>
+        <profile>
+            <id>dummy</id>
+            <!-- No extra deps — logging-only sender -->
+        </profile>
+        <profile>
+            <id>cloopen</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.cloopen</groupId>
+                    <artifactId>java-sms-sdk</artifactId>
+                    <version>1.0.4</version>
+                    <scope>compile</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>xml-apis</groupId>
+                            <artifactId>xml-apis</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>yunxin</id>
+            <!-- httpclient is provided by Keycloak runtime, no extra deps needed -->
+        </profile>
+        <profile>
+            <id>aliyun</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.aliyun</groupId>
+                    <artifactId>alibabacloud-dysmsapi20170525</artifactId>
+                    <version>3.0.0</version>
+                    <scope>compile</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.bouncycastle</groupId>
+                            <artifactId>bcprov-jdk15on</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>tencent</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.tencentcloudapi</groupId>
+                    <artifactId>tencentcloud-sdk-java</artifactId>
+                    <version>3.1.706</version>
+                    <scope>compile</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>totalvoice</id>
+            <dependencies>
+                <dependency>
+                    <groupId>br.com.totalvoice</groupId>
+                    <artifactId>totalvoice-java</artifactId>
+                    <version>1.4.13</version>
+                    <scope>compile</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>twofactor</id>
+            <!-- Uses okhttp which is already a compile dep in the base module -->
+        </profile>
+        <profile>
+            <id>all-senders</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.twilio.sdk</groupId>
+                    <artifactId>twilio</artifactId>
+                    <version>9.2.4</version>
+                    <scope>compile</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-sns</artifactId>
+                    <scope>compile</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.cloopen</groupId>
+                    <artifactId>java-sms-sdk</artifactId>
+                    <version>1.0.4</version>
+                    <scope>compile</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>xml-apis</groupId>
+                            <artifactId>xml-apis</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.aliyun</groupId>
+                    <artifactId>alibabacloud-dysmsapi20170525</artifactId>
+                    <version>3.0.0</version>
+                    <scope>compile</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.bouncycastle</groupId>
+                            <artifactId>bcprov-jdk15on</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>com.tencentcloudapi</groupId>
+                    <artifactId>tencentcloud-sdk-java</artifactId>
+                    <version>3.1.706</version>
+                    <scope>compile</scope>
+                </dependency>
+                <dependency>
+                    <groupId>br.com.totalvoice</groupId>
+                    <artifactId>totalvoice-java</artifactId>
+                    <version>1.4.13</version>
+                    <scope>compile</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
