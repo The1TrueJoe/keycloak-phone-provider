@@ -45,9 +45,9 @@ public class TokenCodeResource {
       throw new BadRequestException("Phone number is invalid");
     }
 
-    // everybody phones authenticator send AUTH code
+    // Check user existence for non-registration, non-verify types.
+    // AUTH codes should also require user existence to avoid sending SMS to unregistered numbers.
     if (!TokenCodeType.REGISTRATION.equals(tokenCodeType) &&
-        !TokenCodeType.AUTH.equals(tokenCodeType) &&
         !TokenCodeType.VERIFY.equals(tokenCodeType) &&
         Utils.findUserByPhone(session, session.getContext().getRealm(), phoneNumber).isEmpty()) {
       throw new ForbiddenException("Phone number not found");
