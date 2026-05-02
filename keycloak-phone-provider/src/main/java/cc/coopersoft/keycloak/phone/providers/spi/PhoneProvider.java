@@ -25,6 +25,17 @@ public interface PhoneProvider extends Provider {
 
     Optional<String> phoneNumberRegex();
 
+    int tokenExpiresIn();
+
+    boolean allowAuthenticationCodeForNewUsers();
+
+    /**
+     * Optional domain appended to outbound SMS as the OTPA footer (@domain #code)
+     * for OS-level domain-bound OTP autofill. Configure via
+     * {@code --spi-phone-default-otp-domain=example.com}.
+     */
+    Optional<String> otpDomain();
+
     int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind);
 
 

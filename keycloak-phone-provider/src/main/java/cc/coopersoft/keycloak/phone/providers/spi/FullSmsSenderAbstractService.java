@@ -40,8 +40,24 @@ public abstract class FullSmsSenderAbstractService implements MessageSenderServi
             throws MessageSendException {
         final String defaultMessage = String.format("[%s] - " + type.label + " code: %s, expires: %s minute ",
                 realmDisplay, code, expires / 60);
-        final String MESSAGE = localizeMessage(type, phoneNumber, code, expires).orElse(defaultMessage);
-        sendMessage(phoneNumber, MESSAGE);
+        String message = localizeMessage(type, phoneNumber, code, expires).orElse(defaultMessage);
+        // Append OTPA domain-bound footer so OS-level OTP autofill can bind the
+        // code to the correct application. Requires --spi-phone-default-otp-domain
+        // and a matching associated-domain entry in the client app.
+        if (session != null) {
+            try {
+                PhoneProvider phoneProvider = session.getProvider(PhoneProvider.class);
+                if (phoneProvider != null) {
+                    Optional<String> domain = phoneProvider.otpDomain();
+                    if (domain.isPresent()) {
+                        message = message + "\n\n@" + domain.get() + " #" + code;
+                    }
+                }
+            } catch (Exception ex) {
+                logger.warn("Could not append OTP domain suffix to SMS", ex);
+            }
+        }
+        sendMessage(phoneNumber, message);
     }
 
     /**

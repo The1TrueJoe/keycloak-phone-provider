@@ -115,6 +115,21 @@ public class DefaultPhoneProvider implements PhoneProvider {
     }
 
     @Override
+    public int tokenExpiresIn() {
+        return tokenExpiresIn;
+    }
+
+    @Override
+    public boolean allowAuthenticationCodeForNewUsers() {
+        return getBooleanConfigValue("allow-authentication-code-for-new-users", false);
+    }
+
+    @Override
+    public Optional<String> otpDomain() {
+        return getStringConfigValue("otp-domain");
+    }
+
+    @Override
     public int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind) {
 
         logger.info("send code to:" + phoneNumber);
