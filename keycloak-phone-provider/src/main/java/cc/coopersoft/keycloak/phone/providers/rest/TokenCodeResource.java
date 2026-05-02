@@ -53,7 +53,7 @@ public class TokenCodeResource {
       throw new ForbiddenException("Phone number not found");
     }
 
-    logger.info(String.format("Requested %s code to %s", tokenCodeType.label, phoneNumber));
+    logger.debug(String.format("Requested %s code to %s", tokenCodeType.label, phoneNumber));
     int tokenExpiresIn = phoneProvider.sendTokenCode(phoneNumber,
         session.getContext().getConnection().getRemoteAddr(), tokenCodeType, kind);
 

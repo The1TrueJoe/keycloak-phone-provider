@@ -86,7 +86,7 @@ public abstract class FullSmsSenderAbstractService implements MessageSenderServi
 
 
                 final Locale locale = OptionalUtils.ofBlank(localeName).map(Locale::forLanguageTag).orElseGet(() -> {
-                    logger.warn("user's locale and realm's default locale is not config,sms message language Locale.getDefault will be used!");
+                    logger.debug("user's locale and realm's default locale is not config,sms message language Locale.getDefault will be used!");
                     return Locale.getDefault();
                 }) ;
 

@@ -43,11 +43,11 @@ public class DefaultPhoneProvider implements PhoneProvider {
         }
 
         if (Validation.isBlank(config.get("service")))
-            logger.warn("No message sender service provider specified! Default provider'" +
+            logger.debug("No message sender service provider specified! Default provider'" +
                     this.service
                     + "' will be used. You can use keycloak start param '--spi-phone-default-service' to specify a different one. ");
 
-        logger.info("SMS sender provider '" + this.service + "' will be used!");
+        logger.debug("SMS sender provider '" + this.service + "' will be used!");
 
         this.tokenExpiresIn = config.getInt("tokenExpiresIn", 60);
         this.targetHourMaximum = config.getInt("targetHourMaximum", 3);
@@ -132,7 +132,7 @@ public class DefaultPhoneProvider implements PhoneProvider {
     @Override
     public int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind) {
 
-        logger.info("send code to:" + phoneNumber);
+        logger.debug("send code to:" + phoneNumber);
 
         if (getTokenCodeService().isAbusing(phoneNumber, type, sourceAddr, sourceHourMaximum, targetHourMaximum)) {
             throw new ForbiddenException("You requested the maximum number of messages the last hour");
@@ -140,7 +140,7 @@ public class DefaultPhoneProvider implements PhoneProvider {
 
         TokenCodeRepresentation ongoing = getTokenCodeService().ongoingProcess(phoneNumber, type);
         if (ongoing != null) {
-            logger.info(String.format("No need of sending a new %s code for %s", type.label, phoneNumber));
+            logger.debug(String.format("No need of sending a new %s code for %s", type.label, phoneNumber));
             return (int) (ongoing.getExpiresAt().getTime() - Instant.now().toEpochMilli()) / 1000;
         }
 
@@ -151,7 +151,7 @@ public class DefaultPhoneProvider implements PhoneProvider {
                     tokenExpiresIn, kind);
             getTokenCodeService().persistCode(token, type, tokenExpiresIn);
 
-            logger.info(String.format("Sent %s code to %s over %s", type.label, phoneNumber, service));
+            logger.debug(String.format("Sent %s code to %s over %s", type.label, phoneNumber, service));
 
         } catch (MessageSendException e) {
 

@@ -99,13 +99,13 @@ public class Utils {
         var resultPhoneNumber = phoneNumber.trim();
         var defaultRegion = defaultRegion(session);
 
-        logger.info(String.format("default region '%s' will be used", defaultRegion));
+        logger.debug(String.format("default region '%s' will be used", defaultRegion));
 
 
         try {
             var parsedNumber = phoneNumberUtil.parse(resultPhoneNumber, defaultRegion);
             if (provider.validPhoneNumber() && !phoneNumberUtil.isValidNumber(parsedNumber)) {
-                logger.info(
+                logger.debug(
                         String.format("Phone number [%s] Valid fail with google's libphonenumber", resultPhoneNumber));
                 throw new PhoneNumberInvalidException(PhoneNumberInvalidException.ErrorType.VALID_FAIL,
                         String.format("Phone number [%s] Valid fail with google's libphonenumber", resultPhoneNumber));
@@ -127,7 +127,7 @@ public class Utils {
 
             var phoneNumberRegex = provider.phoneNumberRegex();
             if (!phoneNumberRegex.map(resultPhoneNumber::matches).orElse(true)) {
-                logger.info(String.format("Phone number [%s] not match regex '%s'", resultPhoneNumber,
+                logger.debug(String.format("Phone number [%s] not match regex '%s'", resultPhoneNumber,
                         phoneNumberRegex.orElse("")));
                 throw new PhoneNumberInvalidException(PhoneNumberInvalidException.ErrorType.NOT_SUPPORTED,
                         String.format("Phone number [%s] not match regex '%s'", resultPhoneNumber,
@@ -135,7 +135,7 @@ public class Utils {
             }
             return resultPhoneNumber;
         } catch (NumberParseException e) {
-            logger.info(e);
+            logger.debug(e);
             throw new PhoneNumberInvalidException(e);
         }
     }
