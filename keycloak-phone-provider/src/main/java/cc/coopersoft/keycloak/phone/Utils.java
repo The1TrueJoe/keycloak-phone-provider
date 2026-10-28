@@ -78,7 +78,7 @@ public class Utils {
         });
     }
 
-    private static String defaultRegion(KeycloakSession session) {
+    public static String defaultRegion(KeycloakSession session) {
         var defaultRegion = session.getProvider(PhoneProvider.class).defaultPhoneRegion();
         return defaultRegion
                 .orElseGet(() -> OptionalUtils.ofBlank(session.getContext().getRealm().getDefaultLocale())

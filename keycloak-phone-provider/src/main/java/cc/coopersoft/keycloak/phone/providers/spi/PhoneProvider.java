@@ -36,7 +36,28 @@ public interface PhoneProvider extends Provider {
      */
     Optional<String> otpDomain();
 
-    int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind);
+    /**
+     * Whether this realm sends codes at all. Configure via
+     * {@code --spi-phone-default-realms=realm-a,realm-b}; unset serves every realm.
+     */
+    boolean servesRealm();
+
+    /**
+     * Whether a code may be texted to this number: never a premium-rate one, and with
+     * {@code --spi-phone-default-allowed-regions=US,CA} only one of those regions.
+     */
+    boolean allowsDestination(String phoneNumber);
+
+    default int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind) {
+        return sendTokenCode(phoneNumber, sourceAddr, type, kind, true);
+    }
+
+    /**
+     * With {@code deliver} false, everything a send does (realm and region checks, hourly limits,
+     * reusing a pending code, storing a new one) except texting it: what a number no user holds is
+     * answered with, so its answers can't be told from a real send's.
+     */
+    int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind, boolean deliver);
 
 
 

@@ -84,36 +84,24 @@ public class DefaultPhoneVerificationCodeProvider implements PhoneVerificationCo
         }
     }
 
+    /**
+     * Claims one of this hour's sends to {@code phoneNumber} and from {@code sourceAddr}, every code type
+     * counted together, and answers true when either is used up. Each claim is a {@code putIfAbsent} in the
+     * single-use store, so parallel requests can't all read a count of zero and all send.
+     * ponytail: a clock-hour window, so up to twice the maximum across an hour boundary.
+     */
     @Override
     public boolean isAbusing(String phoneNumber, TokenCodeType tokenCodeType,
                              String sourceAddr, int sourceHourMaximum, int targetHourMaximum) {
+        String hour = getRealm().getId() + ":" + System.currentTimeMillis() / TimeUnit.HOURS.toMillis(1);
+        return (targetHourMaximum > 0 && !claim("phone.to:" + phoneNumber + ":" + hour, targetHourMaximum))
+                || (sourceHourMaximum > 0 && !claim("phone.from:" + sourceAddr + ":" + hour, sourceHourMaximum));
+    }
 
-        Date oneHourAgo = new Date(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
-
-        if (targetHourMaximum > 0) {
-            long targetCount = (getEntityManager()
-                    .createNamedQuery("processesSinceTarget", Long.class)
-                    .setParameter("realmId", getRealm().getId())
-                    .setParameter("phoneNumber", phoneNumber)
-                    .setParameter("date", oneHourAgo, TemporalType.TIMESTAMP)
-                    .setParameter("type", tokenCodeType.name())
-                    .getSingleResult());
-            if (targetCount > targetHourMaximum)
-                return true;
+    private boolean claim(String key, int maximum) {
+        for (int i = 0; i < maximum; i++) {
+            if (session.singleUseObjects().putIfAbsent(key + ":" + i, TimeUnit.HOURS.toSeconds(1))) return true;
         }
-
-        if (sourceHourMaximum > 0) {
-            long sourceCount = (getEntityManager()
-                    .createNamedQuery("processesSinceSource", Long.class)
-                    .setParameter("realmId", getRealm().getId())
-                    .setParameter("addr", sourceAddr)
-                    .setParameter("date", oneHourAgo, TemporalType.TIMESTAMP)
-                    .setParameter("type", tokenCodeType.name())
-                    .getSingleResult());
-            if (sourceCount > sourceHourMaximum)
-                return true;
-        }
-
         return false;
     }
 

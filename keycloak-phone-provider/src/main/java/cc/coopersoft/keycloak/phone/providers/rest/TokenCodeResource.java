@@ -44,18 +44,19 @@ public class TokenCodeResource {
     } catch (PhoneNumberInvalidException e) {
       throw new BadRequestException("Phone number is invalid");
     }
-
-    // Check user existence for non-registration, non-verify types.
-    // AUTH codes should also require user existence to avoid sending SMS to unregistered numbers.
-    if (!TokenCodeType.REGISTRATION.equals(tokenCodeType) &&
-        !TokenCodeType.VERIFY.equals(tokenCodeType) &&
-        Utils.findUserByPhone(session, session.getContext().getRealm(), phoneNumber).isEmpty()) {
-      throw new ForbiddenException("Phone number not found");
+    if (!phoneProvider.allowsDestination(phoneNumber)) {
+      throw new BadRequestException("Phone number is not supported");
     }
 
-    logger.debug(String.format("Requested %s code to %s", tokenCodeType.label, phoneNumber));
+    // Sign-in, reset and OTP codes are texted only to a number some user holds. A number nobody
+    // holds goes through the same checks and limits without the text, so the answer (status,
+    // expires_in, limits) does not tell who has an account.
+    boolean deliver = TokenCodeType.REGISTRATION.equals(tokenCodeType) ||
+        TokenCodeType.VERIFY.equals(tokenCodeType) ||
+        Utils.findUserByPhone(session, session.getContext().getRealm(), phoneNumber).isPresent();
+    logger.debug(String.format("Requested %s code to %s (texted: %s)", tokenCodeType.label, phoneNumber, deliver));
     int tokenExpiresIn = phoneProvider.sendTokenCode(phoneNumber,
-        session.getContext().getConnection().getRemoteAddr(), tokenCodeType, kind);
+        session.getContext().getConnection().getRemoteAddr(), tokenCodeType, kind, deliver);
 
     String response = String.format("{\"expires_in\":%s}", tokenExpiresIn);
 

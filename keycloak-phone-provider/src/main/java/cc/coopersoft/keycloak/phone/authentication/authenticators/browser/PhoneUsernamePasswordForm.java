@@ -153,13 +153,8 @@ public class PhoneUsernamePasswordForm extends UsernamePasswordForm implements A
                     .map(user -> validateVerificationCode(context, user, validPhoneNumber, code)
                             && validateUser(context, user, validPhoneNumber))
                     .orElseGet(() -> {
-                        context.getEvent().error(Errors.USER_NOT_FOUND);
-                        context.form().setAttribute(ATTEMPTED_PHONE_ACTIVATED, true)
-                                .setAttribute(ATTEMPTED_PHONE_NUMBER, phoneNumber);
-                        assemblyForm(context, context.form());
-                        Response challengeResponse = challenge(context, SupportPhonePages.Errors.USER_NOT_FOUND.message(),
-                                FIELD_PHONE_NUMBER);
-                        context.failureChallenge(AuthenticationFlowError.INVALID_USER, challengeResponse);
+                        // Answered as a wrong code, so the form does not tell who has an account.
+                        invalidVerificationCode(context, phoneNumber);
                         return false;
                     });
         } catch (PhoneNumberInvalidException e) {

@@ -1,13 +1,19 @@
 package cc.coopersoft.keycloak.phone.providers.spi.impl;
 
 import cc.coopersoft.common.OptionalUtils;
+import cc.coopersoft.keycloak.phone.Utils;
 import cc.coopersoft.keycloak.phone.providers.constants.TokenCodeType;
 import cc.coopersoft.keycloak.phone.providers.exception.MessageSendException;
 import cc.coopersoft.keycloak.phone.providers.representations.TokenCodeRepresentation;
 import cc.coopersoft.keycloak.phone.providers.spi.MessageSenderService;
 import cc.coopersoft.keycloak.phone.providers.spi.PhoneProvider;
 import cc.coopersoft.keycloak.phone.providers.spi.PhoneVerificationCodeProvider;
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.ServiceUnavailableException;
 import org.jboss.logging.Logger;
 import org.keycloak.Config.Scope;
@@ -15,7 +21,11 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.services.validation.Validation;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DefaultPhoneProvider implements PhoneProvider {
 
@@ -130,21 +140,68 @@ public class DefaultPhoneProvider implements PhoneProvider {
     }
 
     @Override
-    public int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind) {
+    public boolean servesRealm() {
+        Set<String> realms = csv(config.get("realms"));
+        return realms.isEmpty() || realms.contains(getRealmName().toUpperCase(Locale.ROOT));
+    }
+
+    @Override
+    public boolean allowsDestination(String phoneNumber) {
+        return allowedDestination(phoneNumber, Utils.defaultRegion(session),
+                csv(getStringConfigValue("allowed-regions").orElse(null)));
+    }
+
+    static boolean allowedDestination(String phoneNumber, String defaultRegion, Set<String> allowedRegions) {
+        PhoneNumberUtil util = PhoneNumberUtil.getInstance();
+        try {
+            var number = util.parse(phoneNumber, defaultRegion);
+            if (util.getNumberType(number) == PhoneNumberType.PREMIUM_RATE) return false;
+            return allowedRegions.isEmpty() || allowedRegions.contains(util.getRegionCodeForNumber(number));
+        } catch (NumberParseException e) {
+            return false;
+        }
+    }
+
+    /** The upper-cased, non-blank entries of a comma-separated value; empty when unset. */
+    static Set<String> csv(String value) {
+        if (value == null) return Set.of();
+        return Arrays.stream(value.split(","))
+                .map(s -> s.trim().toUpperCase(Locale.ROOT))
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public int sendTokenCode(String phoneNumber, String sourceAddr, TokenCodeType type, String kind, boolean deliver) {
 
         logger.debug("send code to:" + phoneNumber);
 
-        if (getTokenCodeService().isAbusing(phoneNumber, type, sourceAddr, sourceHourMaximum, targetHourMaximum)) {
-            throw new ForbiddenException("You requested the maximum number of messages the last hour");
+        if (!servesRealm()) {
+            throw new NotFoundException();
+        }
+        if (!allowsDestination(phoneNumber)) {
+            throw new BadRequestException("Phone number is not supported");
         }
 
+        // A pending code is reused before any limit is taken, so asking again within its lifetime is free.
         TokenCodeRepresentation ongoing = getTokenCodeService().ongoingProcess(phoneNumber, type);
         if (ongoing != null) {
             logger.debug(String.format("No need of sending a new %s code for %s", type.label, phoneNumber));
             return (int) (ongoing.getExpiresAt().getTime() - Instant.now().toEpochMilli()) / 1000;
         }
 
+        if (getTokenCodeService().isAbusing(phoneNumber, type, sourceAddr, sourceHourMaximum, targetHourMaximum)) {
+            throw new ForbiddenException("You requested the maximum number of messages the last hour");
+        }
+
         TokenCodeRepresentation token = TokenCodeRepresentation.forPhoneNumber(phoneNumber);
+
+        if (!deliver) {
+            // ponytail: the stored code is never texted, so a user who gets this number within its
+            // lifetime waits it out (tokenExpiresIn) before a real code goes out.
+            getTokenCodeService().persistCode(token, type, tokenExpiresIn);
+            return tokenExpiresIn;
+        }
 
         try {
             session.getProvider(MessageSenderService.class, service).sendSmsMessage(type, phoneNumber, token.getCode(),
